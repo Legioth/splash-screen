@@ -1,7 +1,5 @@
 package org.vaadin.leif.splashscreen.demo;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 
 import org.vaadin.leif.splashscreen.SplashScreen;
@@ -22,13 +20,6 @@ public class NoAutocloseDemo extends UI {
             "/noautohide/*" }, asyncSupported = true)
     @VaadinServletConfiguration(productionMode = false, ui = NoAutocloseDemo.class)
     public static class Servlet extends VaadinServlet {
-        @Override
-        public void init(ServletConfig servletConfig) throws ServletException {
-            super.init(servletConfig);
-
-            // Hook up with the framework's host page generation
-            SplashScreenHandler.init(getService());
-        }
     }
 
     @Override
