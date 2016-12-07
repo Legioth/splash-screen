@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.DataNode;
@@ -19,9 +20,6 @@ import org.jsoup.select.Elements;
 import com.vaadin.server.BootstrapFragmentResponse;
 import com.vaadin.server.BootstrapListener;
 import com.vaadin.server.BootstrapPageResponse;
-import com.vaadin.server.ServiceException;
-import com.vaadin.server.SessionInitEvent;
-import com.vaadin.server.SessionInitListener;
 import com.vaadin.server.VaadinService;
 import com.vaadin.server.VaadinServlet;
 import com.vaadin.ui.UI;
@@ -40,19 +38,28 @@ public class SplashScreenHandler implements BootstrapListener {
     private static final String INJECTOR_SCRIPT = readInjectorScript();
 
     /**
-     * Installs a spash screen handler into the given Vaadin service instance.
+     * Keeps track of {@link VaadinService} instances for which the splash
+     * screen handler has already been initialized.
+     */
+    private static final ConcurrentHashMap<VaadinService, Boolean> initedServices = new ConcurrentHashMap<>();
+
+    /**
+     * Installs a splash screen handler into the given Vaadin service instance.
+     * No-op if the splash screen handler has already been added for the
+     * provided service.
      *
      * @param service
      *            the vaadin service instance to use
      */
     public static void init(VaadinService service) {
-        final SplashScreenHandler handler = new SplashScreenHandler();
-        service.addSessionInitListener(new SessionInitListener() {
-            @Override
-            public void sessionInit(SessionInitEvent event)
-                    throws ServiceException {
-                event.getSession().addBootstrapListener(handler);
-            }
+        initedServices.computeIfAbsent(service, s -> {
+            SplashScreenHandler handler = new SplashScreenHandler();
+            s.addSessionInitListener(
+                    event -> event.getSession().addBootstrapListener(handler));
+            s.addServiceDestroyListener(e -> initedServices.remove(s));
+
+            // Dummy value, using the map as a set
+            return Boolean.TRUE;
         });
     }
 
