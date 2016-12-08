@@ -2,7 +2,7 @@
 	var hook = function() {
 		var splash = document.getElementById("splash");
 		if (splash) {
-			splash.remove();
+			splash.parentElement.removeChild(splash);
 		}
 		
 		var hooks = window.vaadin.postRequestHooks;

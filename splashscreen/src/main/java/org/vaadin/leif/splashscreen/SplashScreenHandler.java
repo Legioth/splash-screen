@@ -78,7 +78,7 @@ public class SplashScreenHandler implements BootstrapListener {
      */
     public static void hide(UI ui) {
         ui.getPage().getJavaScript().execute(
-                "var splash = document.getElementById('splash'); splash && splash.remove()");
+                "var splash = document.getElementById('splash'); splash && splash.parentElement.removeChild(splash);");
     }
 
     private static String readInjectorScript() {
