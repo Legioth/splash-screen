@@ -23,6 +23,7 @@ public class SplashScreenDemoLayout extends VerticalLayout {
         Label links = new Label("Some variations to check out:<ul>"
                 + "<li><a href='.'>Basic</a></li>"
                 + "<li><a href='image'>Image</a></li>"
+                + "<li><a href='custom'>Custom generator</a></li>"
                 + "<li><a href='noautohide'>Without autohide</a></li>"
                 + "<li><a href='.?splash'>Basic without loading the applciation</a></li>"
                 + "<li><a href='.?splash=notheme'>Basic without loading the applciation or theme</a></li>"
