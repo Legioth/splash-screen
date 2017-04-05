@@ -4,14 +4,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.DataNode;
-import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.parser.Tag;
@@ -119,19 +115,23 @@ public class SplashScreenHandler implements BootstrapListener {
     @Override
     public void modifyBootstrapPage(BootstrapPageResponse response) {
         Class<? extends UI> uiClass = response.getUiClass();
-        SplashScreen splashScreen = uiClass.getAnnotation(SplashScreen.class);
-        if (splashScreen == null) {
+
+        Configurator configurator = getConfigurator(uiClass);
+
+        SplashScreenConfiguration configuration = configurator
+                .getConfiguration(new SplashScreenEnvironment(uiClass,
+                        response.getRequest(), response.getSession()));
+
+        if (configuration == null) {
             // UI not annotated, ignore
             return;
         }
-
-        String fileName = splashScreen.value();
 
         Element splashScreenHolder = response.getDocument().body()
                 .prependElement("div");
         StringBuilder styleBuilder = new StringBuilder("position: absolute;");
 
-        int height = splashScreen.height();
+        int height = configuration.getHeight();
         if (height > 0) {
             styleBuilder.append("top:50%;");
             styleBuilder.append("height:").append(height).append("px;");
@@ -141,7 +141,7 @@ public class SplashScreenHandler implements BootstrapListener {
             styleBuilder.append("top:0;bottom:0;");
         }
 
-        int width = splashScreen.width();
+        int width = configuration.getWidth();
         if (width > 0) {
             styleBuilder.append("left:50%;");
             styleBuilder.append("width:").append(width).append("px;");
@@ -155,7 +155,7 @@ public class SplashScreenHandler implements BootstrapListener {
                 styleBuilder.toString());
 
         // Inject splash screen HTML into the beginning of the body
-        List<Node> splashContents = getSplashContents(uiClass, fileName);
+        List<Node> splashContents = configuration.getContents();
         for (Node content : splashContents) {
             splashScreenHolder.appendChild(content);
         }
@@ -179,7 +179,7 @@ public class SplashScreenHandler implements BootstrapListener {
                 findBootstapScripTag(scripts).after(
                         "<script type='text/javascript'>window.vaadin.registerWidgetset = function() {}</script>");
             }
-        } else if (splashScreen.autohide()) {
+        } else if (configuration.isAutohide()) {
             // Inject splash hider right after the bootstrap js has been loaded
             Element bootstrapScriptTag = findBootstapScripTag(scripts);
             Element bootstrapInjector = new Element(Tag.valueOf("script"), "");
@@ -187,6 +187,23 @@ public class SplashScreenHandler implements BootstrapListener {
             bootstrapInjector.appendChild(new DataNode(INJECTOR_SCRIPT, ""));
             bootstrapScriptTag.after(bootstrapInjector);
         }
+    }
+
+    private static Configurator getConfigurator(Class<? extends UI> uiClass) {
+        Configurator configurator = null;
+        SplashScreenConfigurator configuratorAnnotation = uiClass
+                .getAnnotation(SplashScreenConfigurator.class);
+        if (configuratorAnnotation == null) {
+            configurator = new DefaultConfigurator();
+        } else {
+            try {
+                configurator = configuratorAnnotation.value().newInstance();
+            } catch (InstantiationException | IllegalAccessException e) {
+                throw new RuntimeException("Couldn't instantiate "
+                        + configuratorAnnotation.value());
+            }
+        }
+        return configurator;
     }
 
     private Element findBootstapScripTag(Elements scripts) {
@@ -199,50 +216,4 @@ public class SplashScreenHandler implements BootstrapListener {
         throw new RuntimeException("vaadinBootstrap.js script tag not found");
     }
 
-    private List<Node> getSplashContents(Class<? extends UI> uiClass,
-            String fileName) {
-        if (fileName.endsWith(".html") || fileName.endsWith(".htm")) {
-            return getSplashContentsHtml(uiClass, fileName);
-        } else if (fileName.endsWith(".png") || fileName.endsWith(".jpg")
-                || fileName.endsWith(".jpeg")) {
-            return getSplashContentsImage(fileName);
-        } else {
-            throw new RuntimeException(
-                    "Unsupported file extension for: " + fileName);
-        }
-
-    }
-
-    private List<Node> getSplashContentsImage(String fileName) {
-        return Collections.<Node> singletonList(
-                new Element(Tag.valueOf("img"), "").attr("src", fileName));
-    }
-
-    private List<Node> getSplashContentsHtml(Class<? extends UI> uiClass,
-            String fileName) {
-        InputStream splashResource = uiClass.getResourceAsStream(fileName);
-        if (splashResource == null) {
-            throw new RuntimeException("Couldn't find splash screen file "
-                    + fileName + " for " + uiClass.getName());
-        }
-        try {
-            Document parse = Jsoup.parse(splashResource, "UTF-8", "");
-
-            List<Node> contents = new ArrayList<Node>(
-                    parse.head().childNodes());
-
-            contents.addAll(parse.body().childNodes());
-
-            return contents;
-        } catch (IOException e) {
-            throw new RuntimeException("Couldn't read splash screen file "
-                    + fileName + " for " + uiClass.getName(), e);
-        } finally {
-            try {
-                splashResource.close();
-            } catch (IOException e) {
-                // Ignore
-            }
-        }
-    }
 }

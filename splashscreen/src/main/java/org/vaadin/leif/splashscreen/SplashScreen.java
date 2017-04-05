@@ -9,6 +9,9 @@ import java.lang.annotation.Target;
 
 /**
  * Defines the splash screen to use for the annotated UI.
+ * <p>
+ * This annotation is ignored if the UI is also annotated with
+ * {@link SplashScreenConfigurator @SplashScreenConfigurator}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
